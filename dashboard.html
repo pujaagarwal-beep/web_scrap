@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simple Scrape Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f111a;
+  --card: #1a1d2d;
+  --border: #2a2e45;
+  --text: #e2e8f0;
+  --primary: #3b82f6;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; padding:2rem; }
+
+.header { display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem; }
+h1 { font-size:1.5rem; font-weight:700; color:#fff; }
+.count { background:var(--primary); color:#fff; padding:0.25rem 0.75rem; border-radius:99px; font-size:0.875rem; font-weight:600; }
+
+table { width:100%; border-collapse:collapse; background:var(--card); border-radius:12px; overflow:hidden; box-shadow:0 4px 6px rgba(0,0,0,0.1); }
+th, td { padding:1rem 1.5rem; text-align:left; border-bottom:1px solid var(--border); }
+th { background:rgba(255,255,255,0.05); font-weight:600; color:#94a3b8; text-transform:uppercase; font-size:0.75rem; letter-spacing:0.05em; }
+tr:last-child td { border-bottom:none; }
+tr:hover { background:rgba(255,255,255,0.02); }
+
+.portal { font-weight:600; color:#fff; }
+.keyword { display:inline-block; background:rgba(245,158,11,0.15); color:#fbbf24; padding:0.25rem 0.75rem; border-radius:6px; font-size:0.875rem; font-weight:600; }
+.pdf-btn { display:inline-block; background:rgba(59,130,246,0.15); color:#60a5fa; text-decoration:none; padding:0.4rem 1rem; border-radius:6px; font-weight:600; font-size:0.875rem; transition:all 0.2s; border:1px solid rgba(59,130,246,0.3); }
+.pdf-btn:hover { background:var(--primary); color:#fff; }
+
+.empty { text-align:center; padding:4rem; color:#64748b; font-size:1.1rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Scraping Results</h1>
+  <div class="count" id="count">0 Scraped</div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Website (Portal)</th>
+      <th>Keyword</th>
+      <th>Tender Status</th>
+      <th>Scraped PDF</th>
+    </tr>
+  </thead>
+  <tbody id="tbody">
+    <tr><td colspan="3" class="empty">Waiting for scraper to start...</td></tr>
+  </tbody>
+</table>
+
+<script>
+function hostname(url) {
+  try { return new URL(url).hostname; } catch { return url; }
+}
+
+async function load() {
+  try {
+    const res = await fetch('tender_details.json?' + Date.now());
+    if (!res.ok) return;
+    const obj = await res.json();
+    const data = Object.values(obj);
+    
+    document.getElementById('count').textContent = data.length + ' Scraped';
+
+    if (data.length === 0) {
+      document.getElementById('tbody').innerHTML = '<tr><td colspan="3" class="empty">Scraping in progress. Waiting for data...</td></tr>';
+      return;
+    }
+
+    document.getElementById('tbody').innerHTML = data.map(t => {
+      const pdfs = Array.isArray(t.DownloadedPDFs) ? t.DownloadedPDFs.filter(Boolean) : (t.DownloadedPDFs ? [t.DownloadedPDFs] : []);
+      const pdfHtml = pdfs.length > 0 
+        ? pdfs.map(p => `<a href="${p.replace(/\\/g, '/')}" target="_blank" class="pdf-btn">📄 View PDF</a>`).join(' ')
+        : '<span style="color:#64748b;font-style:italic">No PDF</span>';
+
+      let statusColor = '#94a3b8';
+      let bg = 'rgba(255,255,255,0.05)';
+      if (t.StatusCategory === 'AOC') { statusColor = '#10b981'; bg = 'rgba(16,185,129,0.1)'; }
+      if (t.StatusCategory === 'Retender' || t.StatusCategory === 'Cancelled') { statusColor = '#ef4444'; bg = 'rgba(239,68,68,0.1)'; }
+      if (t.StatusCategory.includes('Technical')) { statusColor = '#3b82f6'; bg = 'rgba(59,130,246,0.1)'; }
+      if (t.StatusCategory.includes('Financial')) { statusColor = '#a855f7'; bg = 'rgba(168,85,247,0.1)'; }
+
+      const statusHtml = `<span style="display:inline-block; padding:0.25rem 0.75rem; border-radius:6px; font-size:0.875rem; font-weight:600; color:${statusColor}; background:${bg}; border:1px solid ${statusColor}40;">${t.StatusCategory}</span>`;
+
+      return `
+        <tr>
+          <td class="portal">${hostname(t.Portal)}</td>
+          <td><span class="keyword">${t.Keyword}</span></td>
+          <td>${statusHtml}</td>
+          <td>${pdfHtml}</td>
+        </tr>
+      `;
+    }).join('');
+
+  } catch (e) {
+    // Keep waiting
+  }
+}
+
+// Load immediately and refresh every 10 seconds
+load();
+setInterval(load, 10000);
+</script>
+
+</body>
+</html>

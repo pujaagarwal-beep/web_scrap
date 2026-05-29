@@ -1,0 +1,21 @@
+{
+  "name": "web-scrap",
+  "version": "1.0.0",
+  "description": "",
+  "main": "scrape_wbtenders.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node scrape_portal.js",
+    "start": "node scrape_portal.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "pdf-parse": "^1.1.1",
+    "puppeteer": "^25.0.4",
+    "tesseract.js": "^7.0.0",
+    "xlsx": "^0.18.5"
+  }
+}

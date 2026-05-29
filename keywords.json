@@ -1,0 +1,31 @@
+{
+    "columns": {
+        "SUPPLY OF CABLES": [
+            "CABLE",
+            "CABLES",
+            "WIRES",
+            "INSULATED CONDUCTOR",
+            "WIRE",
+            "INSULATED CONDUCTORS"
+        ],
+        "SUPPLY OF CONDUCTORS": [
+            "CONDUCTOR",
+            "CONDUCTORS",
+            "BARE",
+            "ACSR",
+            "AAAC",
+            "AAC",
+            "WIRE ROD",
+            "conductorsaac/aaac/acsr",
+            "DOG",
+            "PANTHER",
+            "WOLF",
+            "ZEBRA",
+            "WEASEL",
+            "MOOSE",
+            "RABBIT",
+            "SQUIRREL",
+            "RACOON"
+        ]
+    }
+}

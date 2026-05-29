@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>All Portals PDF Tender Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0f1e;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 24px 16px 48px;
+    }
+    .header { text-align: center; margin-bottom: 36px; }
+    .header .badge {
+      display: inline-block;
+      background: linear-gradient(135deg,#6366f1,#8b5cf6);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+    }
+    .header h1 {
+      font-size: clamp(22px,4vw,36px);
+      font-weight: 800;
+      background: linear-gradient(135deg,#a78bfa,#60a5fa,#34d399);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 6px;
+    }
+    .header p { color: #64748b; font-size: 13px; }
+    .container { max-width: 1400px; margin: 0 auto; }
+    
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 18px 20px;
+      text-align: center;
+    }
+    .stat-card .stat-value { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
+    .stat-card .stat-label { font-size: 11px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:1px; }
+    
+    .purple { color: #a78bfa; }
+    .green  { color: #34d399; }
+    .orange { color: #f59e0b; }
+    .blue   { color: #60a5fa; }
+    
+    .card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content:'';
+      position:absolute;
+      top:0; left:0; right:0;
+      height: 3px;
+      background: linear-gradient(90deg,#6366f1,#8b5cf6,#ec4899);
+    }
+    
+    .search-bar {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid #1f2937;
+      background: #0f172a;
+      color: #fff;
+      font-size: 14px;
+      margin-bottom: 20px;
+      font-family: inherit;
+    }
+    .search-bar:focus { outline: none; border-color: #6366f1; }
+    
+    .table-wrap { overflow-x: auto; max-height: 800px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead { position: sticky; top: 0; background: #1a2235; z-index: 10; }
+    thead tr th {
+      color: #6366f1;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #1f2937;
+      white-space: nowrap;
+    }
+    tbody tr {
+      border-bottom: 1px solid #1a2235;
+      transition: background 0.15s;
+    }
+    tbody tr:hover { background: #161e2e; }
+    tbody td {
+      padding: 12px 16px;
+      color: #cbd5e1;
+      vertical-align: top;
+    }
+    
+    .tender-id { color: #a78bfa; font-weight: 700; }
+    .portal-tag {
+      background: rgba(99,102,241,0.15);
+      color: #818cf8;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+    .val { font-weight: 700; color: #34d399; }
+    .error-tag { color: #f87171; font-size: 11px; }
+    
+    .bids-details { font-size: 12px; color: #94a3b8; }
+    .bids-details strong { color: #cbd5e1; }
+    
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="badge">📄 600+ PDFs Processed</div>
+    <h1>Extracted Tender Dashboard</h1>
+    <p>Unified view of AOC & Evaluation Summaries across all state portals</p>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-value purple" id="stat-total">-</div>
+      <div class="stat-label">Total PDFs</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value green" id="stat-success">-</div>
+      <div class="stat-label">Successfully Parsed</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value blue" id="stat-bids">-</div>
+      <div class="stat-label">Total Bidders Found</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value orange" id="stat-value">-</div>
+      <div class="stat-label">Total Contract Value</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <input type="text" class="search-bar" id="search" placeholder="Search by Tender ID, Title, Portal, or L1 Bidder..." />
+    <div class="table-wrap">
+      <table id="data-table">
+        <thead>
+          <tr>
+            <th>Tender ID & Portal</th>
+            <th style="min-width:300px">Title & Org</th>
+            <th>L1 Winner & Value</th>
+            <th>Financial Bids</th>
+            <th>Contract Details</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <tr><td colspan="5" style="text-align:center; padding: 40px;">Loading data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  let rawData = [];
+
+  async function loadData() {
+    try {
+      const res = await fetch('pdf_extracted_data.json');
+      rawData = await res.json();
+      
+      let success = 0;
+      let totalBidders = 0;
+      let totalVal = 0;
+      
+      rawData.forEach(r => {
+        if (!r.error) {
+          success++;
+          totalBidders += (r.financialBids?.length || 0);
+          if (r.contractValue) totalVal += r.contractValue;
+        }
+      });
+      
+      document.getElementById('stat-total').innerText = rawData.length;
+      document.getElementById('stat-success').innerText = success;
+      document.getElementById('stat-bids').innerText = totalBidders;
+      
+      // format total value
+      const valStr = totalVal > 10000000 ? '₹' + (totalVal/10000000).toFixed(2) + ' Cr' : '₹' + totalVal.toLocaleString();
+      document.getElementById('stat-value').innerText = valStr;
+      
+      renderTable(rawData);
+    } catch(e) {
+      document.getElementById('table-body').innerHTML = `<tr><td colspan="5" style="color:#f87171">Error loading data: ${e.message}</td></tr>`;
+    }
+  }
+
+  function renderTable(data) {
+    const tbody = document.getElementById('table-body');
+    tbody.innerHTML = '';
+    
+    data.forEach(row => {
+      const tr = document.createElement('tr');
+      
+      if (row.error) {
+        tr.innerHTML = `
+          <td><span class="portal-tag">${row.pdfFile}</span></td>
+          <td colspan="4" class="error-tag">Parse Error: ${row.error}</td>
+        `;
+      } else {
+        const titleStr = row.tenderTitle || '-';
+        const orgStr = row.organisation || '-';
+        const finBids = row.financialBids || [];
+        
+        let finHtml = '';
+        if (finBids.length > 0) {
+          finHtml = '<div class="bids-details">';
+          finBids.forEach(b => {
+            finHtml += `<div><strong>${b.rank}</strong>: ${b.bidderName} (₹${b.value})</div>`;
+          });
+          finHtml += '</div>';
+        } else {
+          finHtml = '<span style="color:#64748b; font-size:11px;">No financial bids parsed</span>';
+        }
+        
+        tr.innerHTML = `
+          <td>
+            <div class="tender-id">${row.tenderId || '-'}</div>
+            <div style="margin-top:6px"><span class="portal-tag">${row.portal}</span></div>
+          </td>
+          <td>
+            <div style="font-weight:600; color:#e2e8f0; margin-bottom:4px; font-size:13px">${titleStr}</div>
+            <div style="font-size:11px; color:#64748b;">${orgStr}</div>
+          </td>
+          <td>
+            <div style="font-weight:700; color:#cbd5e1">${row.l1Winner || '-'}</div>
+            ${row.l1Value ? `<div class="val" style="margin-top:4px">₹${row.l1Value.toLocaleString()}</div>` : ''}
+          </td>
+          <td>${finHtml}</td>
+          <td style="font-size:12px; color:#cbd5e1;">
+            ${row.contractValue ? `<div><strong>Value:</strong> ₹${row.contractValue.toLocaleString()}</div>` : ''}
+            ${row.contractDate ? `<div><strong>Date:</strong> ${row.contractDate}</div>` : ''}
+            ${row.workCompletionDays ? `<div><strong>Days:</strong> ${row.workCompletionDays}</div>` : ''}
+          </td>
+        `;
+      }
+      tbody.appendChild(tr);
+    });
+  }
+
+  document.getElementById('search').addEventListener('input', (e) => {
+    const term = e.target.value.toLowerCase();
+    const filtered = rawData.filter(r => {
+      const txt = (r.tenderId + r.tenderTitle + r.portal + r.l1Winner).toLowerCase();
+      return txt.includes(term);
+    });
+    renderTable(filtered);
+  });
+
+  loadData();
+</script>
+</body>
+</html>

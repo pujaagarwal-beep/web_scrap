@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PDF Tender Dashboard – eProcurement Tamil Nadu</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0f1e;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 24px 16px 48px;
+    }
+
+    /* ── Header ── */
+    .header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    .header .badge {
+      display: inline-block;
+      background: linear-gradient(135deg,#6366f1,#8b5cf6);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+    }
+    .header h1 {
+      font-size: clamp(22px,4vw,36px);
+      font-weight: 800;
+      background: linear-gradient(135deg,#a78bfa,#60a5fa,#34d399);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 6px;
+    }
+    .header p {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    /* ── Layout ── */
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    /* ── Tender Info Card ── */
+    .card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(99,102,241,0.15); }
+    .card::before {
+      content:'';
+      position:absolute;
+      top:0; left:0; right:0;
+      height: 3px;
+      background: linear-gradient(90deg,#6366f1,#8b5cf6,#ec4899);
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #6366f1;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title svg { width:16px; height:16px; }
+
+    /* Tender ID hero */
+    .tender-id-block {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .tender-id-label { color:#64748b; font-size:13px; }
+    .tender-id-value {
+      font-size: 22px;
+      font-weight: 800;
+      color: #a78bfa;
+      letter-spacing: 0.5px;
+    }
+
+    /* Info grid */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .info-item { }
+    .info-item .label {
+      font-size: 11px;
+      color: #4b5563;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .info-item .value {
+      font-size: 14px;
+      color: #cbd5e1;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    /* ── Status Pill ── */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .status-accepted { background: rgba(52,211,153,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.3); }
+    .status-rejected { background: rgba(248,113,113,0.15); color:#f87171; border:1px solid rgba(248,113,113,0.3); }
+    .status-dot { width:6px; height:6px; border-radius:50%; background:currentColor; }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead tr th {
+      background: #1a2235;
+      color: #6366f1;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #1f2937;
+    }
+    tbody tr {
+      border-bottom: 1px solid #1a2235;
+      transition: background 0.15s;
+    }
+    tbody tr:hover { background: #161e2e; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody td {
+      padding: 14px 16px;
+      color: #cbd5e1;
+      vertical-align: middle;
+    }
+
+    /* Rank badge */
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      font-weight: 800;
+      font-size: 13px;
+    }
+    .rank-l1 { background: linear-gradient(135deg,#f59e0b,#fbbf24); color:#000; box-shadow:0 0 12px rgba(245,158,11,0.4); }
+    .rank-l2 { background: linear-gradient(135deg,#64748b,#94a3b8); color:#000; }
+
+    /* ── Award hero ── */
+    .award-hero {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+      background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.12));
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: 12px;
+      padding: 24px 28px;
+      margin-bottom: 20px;
+    }
+    .award-hero-left .label { font-size:11px; color:#6366f1; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; }
+    .award-hero-left .bidder-name { font-size:22px; font-weight:800; color:#fff; }
+    .award-hero-left .bid-number { font-size:12px; color:#64748b; margin-top:4px; }
+
+    .award-value-block { text-align: right; }
+    .award-value-block .currency { font-size:13px; color:#64748b; }
+    .award-value-block .amount {
+      font-size: 32px;
+      font-weight: 800;
+      color: #34d399;
+      letter-spacing: -1px;
+    }
+
+    /* ── Stats row ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 18px 20px;
+      text-align: center;
+      transition: transform 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); }
+    .stat-card .stat-value {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .stat-card .stat-label { font-size: 11px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:1px; }
+    .purple { color: #a78bfa; }
+    .green  { color: #34d399; }
+    .blue   { color: #60a5fa; }
+    .orange { color: #f59e0b; }
+
+    /* ── AOC block ── */
+    .aoc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .aoc-item { background: #0f172a; border: 1px solid #1e293b; border-radius: 10px; padding: 16px 18px; }
+    .aoc-item .label { font-size:11px; color:#4b5563; font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+    .aoc-item .value { font-size:15px; font-weight:700; color:#e2e8f0; }
+
+    /* ── Bid list table color coding ── */
+    .bid-accepted td { border-left: 3px solid #34d399; }
+    .bid-rejected td:first-child { border-left: 3px solid #f87171; }
+    .bid-rejected td { border-left: 3px solid #f87171; }
+
+    /* ── Section divider ── */
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 8px 0 20px;
+      color: #374151;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .section-divider::before, .section-divider::after {
+      content:''; flex:1; height:1px; background:#1f2937;
+    }
+
+    /* ── Remark tag ── */
+    .remark-tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+    .remark-highest { background:rgba(248,113,113,0.15); color:#f87171; }
+    .remark-lowest  { background:rgba(52,211,153,0.15); color:#34d399; }
+
+    /* ── Footer ── */
+    .footer { text-align:center; margin-top:40px; color:#374151; font-size:12px; }
+    .footer span { color:#6366f1; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="badge">📄 PDF Extracted Data</div>
+    <h1>eProcurement Tender Summary</h1>
+    <p>Government of Tamil Nadu &nbsp;·&nbsp; Extracted: 26-May-2026 05:27 PM</p>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-value purple">2</div>
+      <div class="stat-label">Total Bids</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value green">2</div>
+      <div class="stat-label">Bids Admitted</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value orange">₹9,95,353</div>
+      <div class="stat-label">Contract Value</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value blue">30</div>
+      <div class="stat-label">Completion Days</div>
+    </div>
+  </div>
+
+  <!-- Tender Info -->
+  <div class="card">
+    <div class="card-title">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/></svg>
+      Tender Information
+    </div>
+
+    <div class="tender-id-block">
+      <span class="tender-id-label">Tender ID</span>
+      <span class="tender-id-value">2026_TNHB_654505_1</span>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="label">Tender Ref No</div>
+        <div class="value">D1/2486/2025</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Organisation</div>
+        <div class="value">Tamil Nadu Housing Board › Salem Circle › Hosur Housing Unit</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Portal</div>
+        <div class="value">eProcurement System – Government of Tamil Nadu</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Report Date</div>
+        <div class="value">26-May-2026</div>
+      </div>
+      <div class="info-item" style="grid-column:1/-1">
+        <div class="label">Tender Title</div>
+        <div class="value">Providing Cable Tray and Panel Board Arrangements in Construction of Commercial Complex Cum Office Building at Phase VII Hosur, Krishnagiri District</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bids List -->
+  <div class="card">
+    <div class="card-title">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Bids List
+    </div>
+    <div class="table-wrap">
+      <table id="bids-table">
+        <thead>
+          <tr>
+            <th>S.No</th>
+            <th>Bid Number</th>
+            <th>Bidder Name</th>
+            <th>Submitted Date</th>
+            <th>Status</th>
+            <th>Remarks</th>
+            <th>Status Updated On</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="bid-rejected">
+            <td>1</td>
+            <td><strong style="color:#a78bfa">1607200</strong></td>
+            <td>GAJENDRAA ELECTRIC COMPANY</td>
+            <td>18-Feb-2026 01:07 PM</td>
+            <td><span class="status-pill status-rejected"><span class="status-dot"></span>Rejected – Finance</span></td>
+            <td><span class="remark-tag remark-highest">Highest Bidder</span></td>
+            <td>20-Feb-2026 11:20 AM</td>
+          </tr>
+          <tr class="bid-accepted">
+            <td>2</td>
+            <td><strong style="color:#34d399">1607173</strong></td>
+            <td>GANAPATHY ELECTRICALS</td>
+            <td>18-Feb-2026 01:46 PM</td>
+            <td><span class="status-pill status-accepted"><span class="status-dot"></span>Accepted – AOC</span></td>
+            <td><span class="remark-tag remark-lowest">Lowest Bidder</span></td>
+            <td>26-Feb-2026 12:06 PM</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Financial Evaluation Bid List -->
+  <div class="card">
+    <div class="card-title">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      Financial Evaluation Bid List
+    </div>
+    <div class="table-wrap">
+      <table id="financial-table">
+        <thead>
+          <tr>
+            <th>S.No</th>
+            <th>Bid Number</th>
+            <th>Bidder Name</th>
+            <th>Quoted Value (INR)</th>
+            <th>Rank</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><strong style="color:#34d399">1607173</strong></td>
+            <td><strong>GANAPATHY ELECTRICALS</strong></td>
+            <td style="font-size:15px; font-weight:700; color:#34d399;">₹10,31,485.20</td>
+            <td><span class="rank-badge rank-l1">L1</span></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><strong style="color:#94a3b8">1607200</strong></td>
+            <td>GAJENDRAA ELECTRIC COMPANY</td>
+            <td style="font-size:15px; font-weight:700; color:#94a3b8;">₹10,89,281.60</td>
+            <td><span class="rank-badge rank-l2">L2</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Awarded Bid Hero -->
+  <div class="card">
+    <div class="card-title">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      Awarded Bid
+    </div>
+
+    <div class="award-hero">
+      <div class="award-hero-left">
+        <div class="label">🏆 Winner – L1 Bidder</div>
+        <div class="bidder-name">GANAPATHY ELECTRICALS</div>
+        <div class="bid-number">Bid No: 1607173</div>
+      </div>
+      <div class="award-value-block">
+        <div class="currency">Total Awarded Contract Value</div>
+        <div class="amount">₹9,95,353.60</div>
+      </div>
+    </div>
+
+    <!-- AOC Details -->
+    <div class="section-divider">AOC Details</div>
+    <div class="aoc-grid">
+      <div class="aoc-item">
+        <div class="label">Contract Date</div>
+        <div class="value">26-Feb-2026</div>
+      </div>
+      <div class="aoc-item">
+        <div class="label">Work Completion Period</div>
+        <div class="value">30 Days</div>
+      </div>
+      <div class="aoc-item">
+        <div class="label">Updated By</div>
+        <div class="value">Pandiyaraj K</div>
+      </div>
+      <div class="aoc-item">
+        <div class="label">Updated On</div>
+        <div class="value">26-Feb-2026 12:06 PM</div>
+      </div>
+      <div class="aoc-item">
+        <div class="label">AOC Document</div>
+        <div class="value" style="color:#6366f1">📄 Workorderfinal.pdf (208 KB)</div>
+      </div>
+      <div class="aoc-item">
+        <div class="label">Awarded Currency</div>
+        <div class="value">🇮🇳 INR (Indian Rupee)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Technical & Finance Evaluation Summary -->
+  <div class="card">
+    <div class="card-title">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Evaluation Summaries
+    </div>
+
+    <div class="section-divider">Bid Opening Summary</div>
+    <div class="info-grid" style="margin-bottom:20px">
+      <div class="info-item">
+        <div class="label">Type</div>
+        <div class="value">Finance</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Updated By</div>
+        <div class="value">Pandiyaraj K</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Updated On</div>
+        <div class="value">19-Feb-2026 06:07 PM</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Document</div>
+        <div class="value" style="color:#6366f1">📄 finance_784812.pdf</div>
+      </div>
+      <div class="info-item" style="grid-column:1/-1">
+        <div class="label">Summary</div>
+        <div class="value">On the Due date of Tender (19.02.2026) for the above work, Two Tenders were received and 2 Tenders are admitted.</div>
+      </div>
+    </div>
+
+    <div class="section-divider">Technical Evaluation</div>
+    <div class="info-grid" style="margin-bottom:20px">
+      <div class="info-item">
+        <div class="label">Chairperson / Co-ordinator</div>
+        <div class="value">EE TNHB (Internal)</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Committee Members</div>
+        <div class="value">Assistant Executive Engineer and Divisional Accountant</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Updated By</div>
+        <div class="value">Pandiyaraj K</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Updated On</div>
+        <div class="value">20-Feb-2026 11:06 AM</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Document</div>
+        <div class="value" style="color:#6366f1">📄 techsummary_784812.pdf (64 KB)</div>
+      </div>
+    </div>
+
+    <div class="section-divider">Finance Evaluation</div>
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="label">Chairperson / Co-ordinator</div>
+        <div class="value">EE TNHB (Internal)</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Committee Members</div>
+        <div class="value">Assistant Executive Engineer and Divisional Accountant</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Updated By</div>
+        <div class="value">Pandiyaraj K</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Updated On</div>
+        <div class="value">20-Feb-2026 11:20 AM</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Document</div>
+        <div class="value" style="color:#6366f1">📄 finsummary_784812.pdf (64 KB)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Dashboard generated from <span>eProcurement – Government of Tamil Nadu</span> PDF &nbsp;·&nbsp; 2026_TNHB_654505_1
+  </div>
+
+</div>
+
+</body>
+</html>
