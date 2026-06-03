@@ -128,7 +128,8 @@ async function handleDownloadCaptcha(page, downloadFolder) {
     while (attempts < 5) {
         console.log(`    [Download] Attempting download captcha solve (Attempt ${attempts + 1})...`);
         const text = await solveCaptcha(page);
-        if (!text) {
+        if (!text || text.length !== 6) {
+            console.warn(`    [Captcha] OCR returned invalid length: ${text ? text.length : 0} ("${text}"). Expected 6. Refreshing...`);
             // Refresh captcha
             const refreshBtn = await page.$('#captcha');
             if (refreshBtn) await refreshBtn.click();
@@ -242,9 +243,26 @@ function saveResultsToFiles() {
         protocolTimeout: 300000
     });
 
-    const page = await browser.newPage();
-    page.setDefaultNavigationTimeout(60000);
-    page.setDefaultTimeout(60000);
+    let page = await browser.newPage();
+    page.setDefaultNavigationTimeout(120000);  // 2 min for slow govt portals
+    page.setDefaultTimeout(120000);
+
+    // Helper: get a fresh page if the current one has crashed/detached
+    async function getPage() {
+        try {
+            // Quick check — if the page is detached, isClosed() returns true
+            if (page.isClosed()) throw new Error('Page is closed');
+            await page.evaluate(() => true);  // lightweight ping
+            return page;
+        } catch (e) {
+            console.warn('  [Recovery] Page detached/crashed. Creating a fresh page...');
+            try { await page.close().catch(() => {}); } catch(_) {}
+            page = await browser.newPage();
+            page.setDefaultNavigationTimeout(120000);
+            page.setDefaultTimeout(120000);
+            return page;
+        }
+    }
 
     try {
         for (let portalIdx = checkpoint.portalIndex; portalIdx < PORTALS_TO_RUN.length; portalIdx++) {
@@ -257,8 +275,23 @@ function saveResultsToFiles() {
             const portalFolder = path.join(downloadsBaseDir, portalHost);
             if (!fs.existsSync(portalFolder)) fs.mkdirSync(portalFolder, { recursive: true });
 
-            // 1. Navigate to portal
-            await page.goto(`${portal}/nicgep/app`, { waitUntil: 'networkidle2' });
+            // 1. Navigate to portal (retry up to 3 times on timeout)
+            let portalLoaded = false;
+            for (let navRetry = 0; navRetry < 3; navRetry++) {
+                try {
+                    page = await getPage();  // recover page if it crashed
+                    await page.goto(`${portal}/nicgep/app`, { waitUntil: 'domcontentloaded', timeout: 90000 });
+                    portalLoaded = true;
+                    break;
+                } catch (navErr) {
+                    console.warn(`  [Nav] Attempt ${navRetry + 1} failed: ${navErr.message}. Retrying...`);
+                    await new Promise(r => setTimeout(r, 3000));
+                }
+            }
+            if (!portalLoaded) {
+                console.error(`  [Nav] Could not reach portal ${portal} after 3 attempts. Skipping.`);
+                continue;
+            }
 
             // 2. Click "Tenders Status" link
             console.log('Searching for Tenders Status page...');
@@ -346,20 +379,59 @@ function saveResultsToFiles() {
                     // Type keyword safely (completely clearing input first)
                     await safelyTypeInput(page, '#KeyWord', keyword);
 
-                    // ── Wait for user to enter captcha and click Search ──
-                    console.log('\n=======================================================');
-                    console.log(`[WAITING FOR CAPTCHA]`);
-                    console.log(`  Status : "${statusOpt.text}"`);
-                    console.log(`  Keyword: "${keyword}"`);
-                    console.log(`  >>> Please type the captcha and click Search!`);
-                    console.log('=======================================================\n');
+                    // ── AUTO-SOLVE CAPTCHA and click Search ──
+                    console.log(`\n[AUTO-CAPTCHA] Solving captcha for Status: "${statusOpt.text}" | Keyword: "${keyword}"`);
 
                     let searchHasData = false;
                     let searchSuccess = false;
-                    const waitStart = Date.now();
+                    const MAX_CAPTCHA_ATTEMPTS = 5;
 
-                    while (Date.now() - waitStart < 90000) {
-                        // Instantly detect "No Tenders found" (case-insensitive)
+                    for (let captchaAttempt = 1; captchaAttempt <= MAX_CAPTCHA_ATTEMPTS; captchaAttempt++) {
+                        console.log(`  [Captcha] Attempt ${captchaAttempt}/${MAX_CAPTCHA_ATTEMPTS}...`);
+
+                        // Check if captcha input field actually exists on this page
+                        const hasCaptcha = await page.evaluate(() => !!document.querySelector('#captchaText')).catch(() => false);
+                        if (!hasCaptcha) {
+                            // No captcha needed — try clicking Search directly
+                            console.log('  [Captcha] No captcha field found. Clicking Search directly...');
+                            const searchBtn = await page.$('input[type="submit"][value="Search"], #Search, input[value="Search"]');
+                            if (searchBtn) {
+                                await Promise.all([
+                                    page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {}),
+                                    searchBtn.click()
+                                ]);
+                            }
+                        } else {
+                            // Solve captcha using OCR
+                            const solvedText = await solveCaptcha(page);
+                            if (!solvedText || solvedText.length !== 6) {
+                                console.warn(`  [Captcha] OCR returned invalid length: ${solvedText ? solvedText.length : 0} ("${solvedText}"). Expected 6. Refreshing captcha and retrying...`);
+                                await page.click('#captcha').catch(() => {});  // Refresh captcha button (id="captcha")
+                                await new Promise(r => setTimeout(r, 2000));
+                                continue;
+                            }
+
+                            // Clear captcha input box and type the solved text
+                            await page.$eval('#captchaText', el => { el.value = ''; });
+                            await page.focus('#captchaText');
+                            await page.type('#captchaText', solvedText, { delay: 50 });
+                            console.log(`  [Captcha] Filled "${solvedText}" into #captchaText. Clicking #Search...`);
+
+                            // Click the Search submit button directly by ID
+                            const searchExists = await page.$('#Search').then(el => !!el).catch(() => false);
+                            if (!searchExists) {
+                                console.warn('  [Captcha] #Search button not found on page. Skipping keyword.');
+                                break;
+                            }
+
+                            await Promise.all([
+                                page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {}),
+                                page.click('#Search')
+                            ]);
+                            await new Promise(r => setTimeout(r, 1000));
+                        }
+
+                        // ── Check result of the search ──
                         const isEmpty = await page.evaluate(() => {
                             const text = document.body.innerText.toLowerCase();
                             return text.includes('no tenders found') ||
@@ -381,7 +453,6 @@ function saveResultsToFiles() {
                             break;
                         }
 
-                        // Detect actual result rows in the table
                         const hasResults = await page.evaluate(() => {
                             const tables = Array.from(document.querySelectorAll('table'));
                             const resTable = tables.find(t => t.innerText.includes('Tender ID') && t.innerText.includes('Title and Ref.No.'));
@@ -400,7 +471,21 @@ function saveResultsToFiles() {
                             break;
                         }
 
-                        await new Promise(r => setTimeout(r, 1000));
+                        // Check if still on captcha form (wrong answer was rejected)
+                        const stillHasCaptcha = await page.evaluate(() => !!document.querySelector('#captchaText')).catch(() => false);
+                        if (stillHasCaptcha) {
+                            console.warn(`  [Captcha] Wrong answer or rejected. Refreshing captcha and retrying...`);
+                            await page.click('#captcha').catch(() => {});  // id="captcha" = Refresh button
+                            await new Promise(r => setTimeout(r, 2000));
+                        } else {
+                            // Page changed but no results — could be a server error
+                            console.warn('  [Captcha] Unexpected page state after search. Retrying...');
+                            await new Promise(r => setTimeout(r, 1500));
+                        }
+                    }
+
+                    if (!searchSuccess) {
+                        console.warn(`  [AUTO-CAPTCHA] Failed to solve captcha after ${MAX_CAPTCHA_ATTEMPTS} attempts. Skipping keyword.`);
                     }
 
                     if (!searchHasData) {
